@@ -557,16 +557,26 @@ class Mega:
                 post_list.append({"a": "d", "n": file, "i": self.request_id})
             return self._api_request(post_list)
 
-    def download(self, file, dest_path=None, dest_filename=None):
+    def download(self, file, dest_path=None, dest_filename=None, , do_yield=False, byte_range=None):
         """
         Download a file by it's file object
         """
-        return list(self._download_file(file_handle=None,
+
+
+        if not do_yield:
+            return list(self._download_file(file_handle=None,
                                    file_key=None,
                                    file=file[1],
                                    dest_path=dest_path,
                                    dest_filename=dest_filename,
-                                   is_public=False))[0]
+                                   is_public=False, byte_range=byte_range))[0]
+        else:
+            return self._download_file(file_handle=None,
+                                   file_key=None,
+                                   file=file[1],
+                                   dest_path=dest_path,
+                                   dest_filename=dest_filename,
+                                   is_public=False, , do_yield=do_yield, byte_range=byte_range)
 
     def _export_file(self, node):
         node_data = self._node_data(node)
