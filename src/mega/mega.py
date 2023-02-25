@@ -630,7 +630,7 @@ class Mega:
         nodes = self.get_files()
         return self.get_folder_link(nodes[node_id])
 
-    def download_url(self, url, dest_path=None, dest_filename=None, do_yeild=False):
+    def download_url(self, url, dest_path=None, dest_filename=None, do_yeild=False, byte_range=None):
         """
         Download a file by it's public url
         """
@@ -643,7 +643,7 @@ class Mega:
                 file_key=file_key,
                 dest_path=dest_path,
                 dest_filename=dest_filename,
-                is_public=True,
+                is_public=True,byte_range=byte_range
             ))[0]
         else:
             return self._download_file(
@@ -651,7 +651,7 @@ class Mega:
                 file_key=file_key,
                 dest_path=dest_path,
                 dest_filename=dest_filename,
-                is_public=True, do_yeild=do_yeild
+                is_public=True, do_yeild=do_yeild, byte_range=byte_range
             )
 
     def _download_file(self,
@@ -660,7 +660,9 @@ class Mega:
                        dest_path=None,
                        dest_filename=None,
                        is_public=False,
-                       file=None, do_yeild=False):
+                       file=None, do_yeild=False, byte_range=None):
+        if type(byte_range) is not tuple and type(byte_range) is not list and byte_range is not None:
+            raise ValueError("byte_range must be in the format of (0, 100)")
         if file is None:
             if is_public:
                 file_key = base64_to_a32(file_key)
@@ -692,7 +694,7 @@ class Mega:
         if 'g' not in file_data:
             raise RequestError('File not accessible anymore')
         file_url = file_data['g']
-        file_size = file_data['s']
+        file_size = file_data['s'] if byte_range is None else byte_range[-1]
         attribs = base64_url_decode(file_data['at'])
         attribs = decrypt_attr(attribs, k)
 
@@ -700,8 +702,12 @@ class Mega:
             file_name = dest_filename
         else:
             file_name = attribs['n']
-
-        input_file = requests.get(file_url, stream=True).raw
+        input_file = None
+        if byte_range is None:
+            input_file = requests.get(file_url, stream=True).raw
+        else:
+            input_file = requests.get(file_url, stream=True, headers={"Range": "bytes="+"-".join([str(x) for x in  byte_range  ])}
+                                      ).raw
 
         if dest_path is None:
             dest_path = ''
@@ -752,9 +758,10 @@ class Mega:
             if not do_yeild:
                 file_mac = str_to_a32(mac_str)
                 # check mac integrity
-                if (file_mac[0] ^ file_mac[1],
-                        file_mac[2] ^ file_mac[3]) != meta_mac:
-                    raise ValueError('Mismatched mac')
+                if byte_range is None:
+                    if (file_mac[0] ^ file_mac[1],
+                            file_mac[2] ^ file_mac[3]) != meta_mac:
+                        raise ValueError('Mismatched mac')
                 output_path = Path(dest_path + file_name)
                 shutil.move(temp_output_file.name, output_path)
                 yield output_path
