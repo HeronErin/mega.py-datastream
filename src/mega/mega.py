@@ -630,14 +630,14 @@ class Mega:
         nodes = self.get_files()
         return self.get_folder_link(nodes[node_id])
 
-    def download_url(self, url, dest_path=None, dest_filename=None, do_yeild=False, byte_range=None):
+    def download_url(self, url, dest_path=None, dest_filename=None, do_yield=False, byte_range=None):
         """
         Download a file by it's public url
         """
         path = self._parse_url(url).split('!')
         file_id = path[0]
         file_key = path[1]
-        if not do_yeild:
+        if not do_yield:
             return list(self._download_file(
                 file_handle=file_id,
                 file_key=file_key,
@@ -651,7 +651,7 @@ class Mega:
                 file_key=file_key,
                 dest_path=dest_path,
                 dest_filename=dest_filename,
-                is_public=True, do_yeild=do_yeild, byte_range=byte_range
+                is_public=True, do_yield=do_yield, byte_range=byte_range
             )
 
     def _download_file(self,
@@ -660,7 +660,7 @@ class Mega:
                        dest_path=None,
                        dest_filename=None,
                        is_public=False,
-                       file=None, do_yeild=False, byte_range=None):
+                       file=None, do_yield=False, byte_range=None):
         if type(byte_range) is not tuple and type(byte_range) is not list and byte_range is not None:
             raise ValueError("byte_range must be in the format of (0, 100)")
         if file is None:
@@ -716,7 +716,7 @@ class Mega:
 
         with tempfile.NamedTemporaryFile(mode='w+b',
                                          prefix='megapy_',
-                                         delete=do_yeild) as temp_output_file:
+                                         delete=do_yield) as temp_output_file:
             k_str = a32_to_str(k)
             counter = Counter.new(128,
                                   initial_value=((iv[0] << 32) + iv[1]) << 64)
@@ -730,7 +730,7 @@ class Mega:
             for chunk_start, chunk_size in get_chunks(file_size):
                 chunk = input_file.read(chunk_size)
                 chunk = aes.decrypt(chunk)
-                if do_yeild:
+                if do_yield:
                     yield chunk
                 else:
                     temp_output_file.write(chunk)
@@ -755,7 +755,7 @@ class Mega:
                 logger.info('%s of %s downloaded', file_info.st_size,
                             file_size)
 
-            if not do_yeild:
+            if not do_yield:
                 file_mac = str_to_a32(mac_str)
                 # check mac integrity
                 if byte_range is None:

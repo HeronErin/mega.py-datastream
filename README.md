@@ -127,6 +127,16 @@ m.download_url('https://mega.co.nz/#!utYjgSTQ!OM4U3V5v_W4N5edSo0wolg1D5H0fwSrLD3
 m.download(file, '/home/john-smith/Desktop')
 # specify optional download filename (download_url() supports this also)
 m.download(file, '/home/john-smith/Desktop', 'myfile.zip')
+
+# Download file in chuncks with do_yield
+f = open("output", "wb")
+for chunck in m.download_url('https://mega.co.nz/#!utYjgSTQ!OM4U3V5v_W4N5edSo0wolg1D5H0fwSrLD3oLnLuS9pc', do_yield=True):
+    f.write(chunck)
+f.close()
+
+# Download first 200 bytes of file
+m.download_url('https://mega.co.nz/#!utYjgSTQ!OM4U3V5v_W4N5edSo0wolg1D5H0fwSrLD3oLnLuS9pc', byte_range=(0, 200)) 
+
 ```
 
 ### Import a file from URL, optionally specify destination folder
