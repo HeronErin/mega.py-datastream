@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 class Mega:
     def __init__(self, options=None):
-        print("init")
         self.schema = 'https'
         self.domain = 'mega.co.nz'
         self.timeout = 160  # max secs to wait for resp from api requests
@@ -562,12 +561,12 @@ class Mega:
         """
         Download a file by it's file object
         """
-        return self._download_file(file_handle=None,
+        return list(self._download_file(file_handle=None,
                                    file_key=None,
                                    file=file[1],
                                    dest_path=dest_path,
                                    dest_filename=dest_filename,
-                                   is_public=False)
+                                   is_public=False))[0]
 
     def _export_file(self, node):
         node_data = self._node_data(node)
@@ -631,20 +630,29 @@ class Mega:
         nodes = self.get_files()
         return self.get_folder_link(nodes[node_id])
 
-    def download_url(self, url, dest_path=None, dest_filename=None):
+    def download_url(self, url, dest_path=None, dest_filename=None, do_yeild=False):
         """
         Download a file by it's public url
         """
         path = self._parse_url(url).split('!')
         file_id = path[0]
         file_key = path[1]
-        return self._download_file(
-            file_handle=file_id,
-            file_key=file_key,
-            dest_path=dest_path,
-            dest_filename=dest_filename,
-            is_public=True,
-        )
+        if not do_yeild:
+            return list(self._download_file(
+                file_handle=file_id,
+                file_key=file_key,
+                dest_path=dest_path,
+                dest_filename=dest_filename,
+                is_public=True,
+            ))[0]
+        else:
+            return self._download_file(
+                file_handle=file_id,
+                file_key=file_key,
+                dest_path=dest_path,
+                dest_filename=dest_filename,
+                is_public=True, do_yeild=do_yeild
+            )
 
     def _download_file(self,
                        file_handle,
@@ -652,7 +660,7 @@ class Mega:
                        dest_path=None,
                        dest_filename=None,
                        is_public=False,
-                       file=None):
+                       file=None, do_yeild=False):
         if file is None:
             if is_public:
                 file_key = base64_to_a32(file_key)
@@ -702,7 +710,7 @@ class Mega:
 
         with tempfile.NamedTemporaryFile(mode='w+b',
                                          prefix='megapy_',
-                                         delete=False) as temp_output_file:
+                                         delete=do_yeild) as temp_output_file:
             k_str = a32_to_str(k)
             counter = Counter.new(128,
                                   initial_value=((iv[0] << 32) + iv[1]) << 64)
@@ -716,7 +724,10 @@ class Mega:
             for chunk_start, chunk_size in get_chunks(file_size):
                 chunk = input_file.read(chunk_size)
                 chunk = aes.decrypt(chunk)
-                temp_output_file.write(chunk)
+                if do_yeild:
+                    yield chunk
+                else:
+                    temp_output_file.write(chunk)
 
                 encryptor = AES.new(k_str, AES.MODE_CBC, iv_str)
                 for i in range(0, len(chunk) - 16, 16):
@@ -737,14 +748,16 @@ class Mega:
                 file_info = os.stat(temp_output_file.name)
                 logger.info('%s of %s downloaded', file_info.st_size,
                             file_size)
-            file_mac = str_to_a32(mac_str)
-            # check mac integrity
-            if (file_mac[0] ^ file_mac[1],
-                    file_mac[2] ^ file_mac[3]) != meta_mac:
-                raise ValueError('Mismatched mac')
-            output_path = Path(dest_path + file_name)
-            shutil.move(temp_output_file.name, output_path)
-            return output_path
+
+            if not do_yeild:
+                file_mac = str_to_a32(mac_str)
+                # check mac integrity
+                if (file_mac[0] ^ file_mac[1],
+                        file_mac[2] ^ file_mac[3]) != meta_mac:
+                    raise ValueError('Mismatched mac')
+                output_path = Path(dest_path + file_name)
+                shutil.move(temp_output_file.name, output_path)
+                yield output_path
 
     def upload(self, filename, dest=None, dest_filename=None):
         # determine storage node
