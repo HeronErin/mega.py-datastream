@@ -87,6 +87,24 @@ space = m.get_storage_space(kilo=True)
 files = m.get_files()
 ```
 
+### Upload file from byteio
+
+```python
+m.upload("test.txt", byteio=io.BytesIO(b"test data 1234567890"))
+```
+### Upload file from generator
+
+```python
+def x():
+    yield b"1234567890"
+
+# gen_size MUST BE THE DATA'S SIZE
+m.upload("test.txt", gen_size=10, generator=x())
+
+# Otherwise you will get the following error:
+# mega.errors.RequestError: EARGS, You have passed invalid arguments to this command
+```
+
 ### Upload a file, and get its public link
 
 ```python
