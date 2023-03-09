@@ -777,7 +777,7 @@ class Mega:
                 yield output_path
 
     def upload(self, filename, dest=None, dest_filename=None, byteio=None, gen_size=None, generator=None):
-
+        i=0
         # determine storage node
         if dest is None:
             # if none set, upload to cloud drive node
