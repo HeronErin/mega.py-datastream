@@ -809,14 +809,15 @@ class Mega:
         mac_encryptor = AES.new(k_str, AES.MODE_CBC,
                                 mac_str.encode("utf8"))
         iv_str = a32_to_str([ul_key[4], ul_key[5], ul_key[4], ul_key[5]])
+        i = 0
         if file_size > 0:
             for chunk_start, chunk_size in get_chunks(file_size):
                 chunk = ( input_file.read(chunk_size) ) if generator is None else next(generator)
                 upload_progress += len(chunk)
 
                 encryptor = AES.new(k_str, AES.MODE_CBC, iv_str)
-                for i in range(0, len(chunk) - 16, 16):
-                    block = chunk[i:i + 16]
+                for ii in range(0, len(chunk) - 16, 16):
+                    block = chunk[ii:ii + 16]
                     encryptor.encrypt(block)
 
                 # fix for files under 16 bytes failing
